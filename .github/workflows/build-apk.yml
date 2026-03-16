@@ -5,51 +5,49 @@ on:
     branches:
       - main
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # Node.js 24
-
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Repo
+    # 1. Checkout code
+    - name: Checkout code
       uses: actions/checkout@v3
 
+    # 2. Setup Java 17
     - name: Setup Java
       uses: actions/setup-java@v3
       with:
         distribution: temurin
         java-version: 17
 
-    - name: Install packages
+    # 3. Install Android SDK manually
+    - name: Install Android SDK
       run: |
         sudo apt-get update
-        sudo apt-get install -y wget unzip tar
-
-    - name: Download Android command-line tools
-      run: |
+        sudo apt-get install -y wget unzip
+        mkdir -p $HOME/android-sdk
         wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
-        mkdir -p $HOME/Android/cmdline-tools
-        unzip cmdline-tools.zip -d $HOME/Android/cmdline-tools
+        unzip cmdline-tools.zip -d $HOME/android-sdk
+        yes | $HOME/android-sdk/cmdline-tools/bin/sdkmanager --licenses
+        $HOME/android-sdk/cmdline-tools/bin/sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
-    - name: Accept licenses & install SDK
+    # 4. Set environment variables
+    - name: Set Android SDK env
       run: |
-        yes | $HOME/Android/cmdline-tools/cmdline-tools/bin/sdkmanager --licenses
-        $HOME/Android/cmdline-tools/cmdline-tools/bin/sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+        echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+        echo "$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
+        echo "$HOME/android-sdk/cmdline-tools/bin" >> $GITHUB_PATH
 
-    - name: Set Android SDK path
-      run: |
-        echo "ANDROID_HOME=$HOME/Android" >> $GITHUB_ENV
-        echo "$HOME/Android/platform-tools" >> $GITHUB_PATH
-        echo "$HOME/Android/cmdline-tools/cmdline-tools/bin" >> $GITHUB_PATH
-
+    # 5. Make Gradle executable
     - name: Make Gradle executable
       run: chmod +x ./gradlew
 
+    # 6. Build APK
     - name: Build APK
       run: ./gradlew assembleDebug --stacktrace --refresh-dependencies
 
+    # 7. Upload APK
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
