@@ -6,59 +6,50 @@ on:
       - main
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # Node.js 24 support
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # Node.js 24
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    # 1️⃣ Checkout code
     - name: Checkout Repo
       uses: actions/checkout@v3
 
-    # 2️⃣ Setup JDK 17
     - name: Setup Java
       uses: actions/setup-java@v3
       with:
         distribution: temurin
         java-version: 17
 
-    # 3️⃣ Install basic packages
-    - name: Install required packages
+    - name: Install packages
       run: |
         sudo apt-get update
         sudo apt-get install -y wget unzip tar
 
-    # 4️⃣ Download Android command-line tools
-    - name: Download Android SDK command-line tools
+    - name: Download Android command-line tools
       run: |
         wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
         mkdir -p $HOME/Android/cmdline-tools
         unzip cmdline-tools.zip -d $HOME/Android/cmdline-tools
 
-    # 5️⃣ Accept licenses & install SDK + Build Tools
-    - name: Accept licenses and install SDK
+    - name: Accept licenses & install SDK
       run: |
         yes | $HOME/Android/cmdline-tools/cmdline-tools/bin/sdkmanager --licenses
         $HOME/Android/cmdline-tools/cmdline-tools/bin/sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
-    # 6️⃣ Set Android environment variables
-    - name: Set Android SDK paths
+    - name: Set Android SDK path
       run: |
         echo "ANDROID_HOME=$HOME/Android" >> $GITHUB_ENV
         echo "$HOME/Android/platform-tools" >> $GITHUB_PATH
         echo "$HOME/Android/cmdline-tools/cmdline-tools/bin" >> $GITHUB_PATH
 
-    # 7️⃣ Make Gradle executable
     - name: Make Gradle executable
       run: chmod +x ./gradlew
 
-    # 8️⃣ Build APK
-    - name: Build Debug APK
+    - name: Build APK
       run: ./gradlew assembleDebug --stacktrace --refresh-dependencies
 
-    # 9️⃣ Upload APK as artifact
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
